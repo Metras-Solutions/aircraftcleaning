@@ -1,0 +1,217 @@
+// components/navigation.tsx
+import React from 'react';
+import Image from 'next/image';
+import { Car } from 'lucide-react';
+
+const Navigation = () => {
+  return (
+    <div className="flex justify-between items-center py-2 sm:py-3">
+      <Image
+        src="/logo_aircraft.png"
+        alt="H&N Aircraft Cleaning Spa"
+        width={480}
+        height={480}
+        className="h-20 sm:h-[120px] w-auto"
+        priority
+      />
+      {/* ** rest of code here ** */}
+    </div>
+  );
+};
+
+export default Navigation;
+
+// components/hero-carousel.tsx
+import React from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import { Navigation } from 'swiper';
+import Image from 'next/image';
+
+const HeroCarousel = () => {
+  const slides = [
+    { image: "/images/hero-slide1.jpeg" },
+    { image: "/slide2_aircraft.png" },
+    { image: "/images/hero-slide3.jpeg" },
+  ];
+
+  return (
+    <Swiper modules={[Navigation]} navigation>
+      {slides.map((slide, index) => (
+        <SwiperSlide key={index}>
+          <Image src={slide.image || "/placeholder.svg"} alt={`Slide ${index + 1}`} width={1920} height={1080} />
+        </SwiperSlide>
+      ))}
+    </Swiper>
+  );
+};
+
+export default HeroCarousel;
+
+// app/servicios/page.tsx
+import React from 'react';
+import { PageHeader } from '@/components/page-header';
+import { Card, CardContent, CardHeader } from '@/components/card';
+import { Sofa } from 'lucide-react';
+
+const ServiciosPage = () => {
+  return (
+    <div>
+      <PageHeader backgroundImage="/servicios_aircraft.png" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <Sofa className="h-6 w-6 text-purple-600" />
+            <h2>Lavado de Muebles</h2>
+          </CardHeader>
+          <CardContent>
+            Limpieza profesional de muebles y tapicería con técnicas especializadas.
+          </CardContent>
+        </Card>
+        {/* ** rest of code here ** */}
+      </div>
+    </div>
+  );
+};
+
+export default ServiciosPage;
+
+// components/services-grid.tsx
+import React from 'react';
+import { Card, CardContent, CardHeader } from '@/components/card';
+import { Sofa } from 'lucide-react';
+
+const ServicesGrid = () => {
+  const services = [
+    { title: "Lavado de Muebles", description: "Limpieza profesional de muebles.", icon: Sofa },
+    // ** rest of code here **
+  ];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {services.map((service, index) => (
+        <Card key={index}>
+          <CardHeader>
+            {React.createElement(service.icon, { className: "h-6 w-6 text-purple-600" })}
+            <h2>{service.title}</h2>
+          </CardHeader>
+          <CardContent>
+            {service.description}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+export default ServicesGrid;
+
+// components/formulario-cotizacion.tsx
+import React from 'react';
+import { Sofa } from 'lucide-react';
+import { Car } from 'lucide-react';
+import { Card, CardContent } from '@/components/card';
+
+const FormularioCotizacion = () => {
+  const getIconoServicio = (servicio) => {
+    switch (servicio) {
+      case "lavado-muebles":
+        return { icon: Sofa, color: "bg-purple-500 text-white" };
+      // ** rest of code here **
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div>
+      {/* ** rest of code here ** */}
+    </div>
+  );
+};
+
+export default FormularioCotizacion;
+
+// components/footer.tsx
+import React from 'react';
+import { Facebook, Instagram, Twitter } from 'lucide-react';
+import Image from 'next/image';
+
+const Footer = () => {
+  return (
+    <div className="bg-gray-800 text-white p-4">
+      <div className="flex justify-between items-center">
+        <Image src="/logo_aircraft.png" alt="H&N Aircraft Cleaning Spa" width={100} height={100} />
+        <div className="flex space-x-4">
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+            <Facebook />
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+            <Instagram />
+          </a>
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
+            <Twitter />
+          </a>
+        </div>
+      </div>
+      <div className="mt-4">
+        <p>Teléfono: +56 9 2370 2189</p>
+        <p>Email: info@hynaircraft.com</p>
+      </div>
+    </div>
+  );
+};
+
+export default Footer;
+
+// app/contacto/page.tsx
+import React from 'react';
+import { PageHeader } from '@/components/page-header';
+import { Card, CardContent } from '@/components/card';
+import { Car } from 'lucide-react';
+
+const ContactoPage = () => {
+  return (
+    <div>
+      <PageHeader title="Contacto" />
+      <div className="mt-4">
+        <p>Teléfono: +56 9 2370 2189</p>
+        <p>Email: info@hynaircraft.com</p>
+      </div>
+      {/* ** rest of code here ** */}
+    </div>
+  );
+};
+
+export default ContactoPage;
+
+// components/whatsapp-button.tsx
+import React from 'react';
+
+const WhatsAppButton = () => {
+  const phoneNumber = "56923702189";
+  const message = "Hola, necesito información sobre sus servicios.";
+
+  return (
+    <a href={`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer">
+      <button className="bg-green-500 text-white px-4 py-2 rounded">
+        Contactar por WhatsApp
+      </button>
+    </a>
+  );
+};
+
+export default WhatsAppButton;
+
+// app/api/send-email/route.ts
+import { NextResponse } from 'next/server';
+
+export async function POST(request) {
+  const { nombre, email, mensaje } = await request.json();
+  const destinatarios = ["info@hynaircraft.com", "noemi.diaz_sarante@hynaircraft.com"];
+
+  // ** rest of code here **
+
+  return NextResponse.json({ message: "Email enviado exitosamente", recipients: destinatarios });
+}
