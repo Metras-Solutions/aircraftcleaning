@@ -27,7 +27,7 @@ export default function Navigation() {
               alt="H&N Aircraft Cleaning Spa"
               width={480}
               height={480}
-              className="h-20 sm:h-[120px] w-auto"
+              className="h-20 sm:h-[170px] w-auto"
               priority
             />
           </Link>
