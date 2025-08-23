@@ -29,12 +29,12 @@ export default function Footer() {
 
             {/* Redes Sociales */}
             <div className="flex space-x-4 mt-4 sm:mt-6">
-              <a href="#" className="text-gray-400 hover:text-blue-500 transition-colors">
-                <Facebook className="h-5 w-5 sm:h-6 sm:w-6" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-pink-500 transition-colors">
-                <Instagram className="h-5 w-5 sm:h-6 sm:w-6" />
-              </a>
+               <a href="https://www.facebook.com/share/16ttTX7YgB/" target="_blank" rel="noopener noreferrer">
+            <Facebook />
+          </a>
+             <a href="https://www.instagram.com/hyn_aircraft_cleaning?igsh=ejl1cnd1bHlpNjR5" target="_blank" rel="noopener noreferrer">
+            <Instagram />
+          </a>
             </div>
           </div>
 
