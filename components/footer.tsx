@@ -23,7 +23,7 @@ export default function Footer() {
             <div className="flex space-x-4">
               <div className="flex items-center text-xs sm:text-sm text-gray-300">
                 <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                24/7 Disponible
+                24/7 Disponibles
               </div>
             </div>
 
