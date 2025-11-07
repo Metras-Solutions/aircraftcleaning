@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Phone, Mail, MapPin, Clock, Send, Loader2 } from "lucide-react"
+import { Phone, Mail, MapPin, Clock, Send, Loader2, AlertTriangle, CheckCircle  } from "lucide-react"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import PageHeader from "@/components/page-header"
 import WhatsAppButton from "@/components/whatsapp-button"
 
 export default function ContactoPage() {
+  const [banner, setBanner] = useState<null | { type: "success" | "error"; msg: string }>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     nombre: "",
@@ -44,9 +46,7 @@ export default function ContactoPage() {
       const result = await response.json()
 
       if (result.success) {
-        alert(
-          "¡Mensaje enviado exitosamente! Hemos enviado una confirmación a tu email y nos pondremos en contacto contigo pronto.",
-        )
+        setBanner({ type: "success", msg: "¡Recibimos tu solicitud! Te contactaremos muy pronto." })
         setFormData({
           nombre: "",
           email: "",
@@ -55,7 +55,7 @@ export default function ContactoPage() {
           mensaje: "",
         })
       } else {
-        alert("Hubo un error al enviar el mensaje. Por favor, inténtalo de nuevo.")
+        setBanner({ type: "error", msg: "No pudimos procesar tu solicitud. Inténtalo en unos minutos." })
       }
     } catch (error) {
       console.error("Error:", error)
@@ -93,6 +93,23 @@ export default function ContactoPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12">
             {/* Formulario de Contacto */}
             <Card>
+              {banner && (
+              <div className="mb-4">
+                <Alert variant={banner.type === "success" ? "default" : "destructive"}>
+                  <div className="flex items-start gap-2">
+                    {banner.type === "success" ? (
+                      <CheckCircle className="h-4 w-4 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 mt-0.5" />
+                    )}
+                    <div>
+                      <AlertTitle>{banner.type === "success" ? "Solicitud enviada" : "Ha ocurrido un problema"}</AlertTitle>
+                      <AlertDescription>{banner.msg}</AlertDescription>
+                    </div>
+                  </div>
+                </Alert>
+              </div>
+            )}
               <CardHeader className="text-center p-4 sm:p-6">
                 <CardTitle className="text-xl sm:text-2xl">Envíanos un Mensaje</CardTitle>
               </CardHeader>

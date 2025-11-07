@@ -20,14 +20,43 @@ import {
   FileText,
   CheckCircle,
   Loader2,
+  AlertTriangle
 } from "lucide-react"
-import { servicios } from "../data/servicios"
-import type { FormularioCotizacionType } from "../types/cotizacion"
 import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+
+// 🚨 Si ya tienes estos tipos en ../types/cotizacion, elimina esta sección y mantén un solo origen.
+type FlotaItem = {
+  servicioId: "limpieza-aeronaves"
+  tipoFlota: string
+  numeroAeronaves: number
+}
+
+type Frecuencia = "unica" | "semanal" | "quincenal" | "mensual" | "personalizada" | ""
+type Urgencia = "normal" | "urgente" | "inmediato" | ""
+
+export type FormularioCotizacionType = {
+  nombre: string
+  email: string
+  telefono: string
+  empresa?: string
+  serviciosSeleccionados: string[]
+  flotaSeleccionada: FlotaItem[]
+  // Paso 4
+  frecuencia: Frecuencia
+  urgencia: Urgencia
+  comentarios: string
+}
+
+// ⚠️ Asegúrate de importar tu fuente real de servicios.
+// Debe tener al menos: id, nombre, (opcional) tieneFlota
+import { servicios } from "../data/servicios"
 
 export default function FormularioCotizacion() {
+  const [banner, setBanner] = useState<null | { type: "success" | "error"; msg: string }>(null)
   const [paso, setPaso] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [formulario, setFormulario] = useState<FormularioCotizacionType>({
     nombre: "",
     email: "",
@@ -35,9 +64,11 @@ export default function FormularioCotizacion() {
     empresa: "",
     serviciosSeleccionados: [],
     flotaSeleccionada: [],
+    frecuencia: "",
+    urgencia: "",
+    comentarios: "",
   })
 
-  const servicioAeronaves = servicios.find((s) => s.id === "limpieza-aeronaves")
   const tieneServicioAeronaves = formulario.serviciosSeleccionados.includes("limpieza-aeronaves")
 
   const pasos = [
@@ -48,21 +79,7 @@ export default function FormularioCotizacion() {
     { numero: 5, titulo: "Confirmación", icono: CheckCircle, color: "bg-emerald-600" },
   ]
 
-  const handleServicioChange = (servicioId: string, checked: boolean) => {
-    if (checked) {
-      setFormulario((prev) => ({
-        ...prev,
-        serviciosSeleccionados: [...prev.serviciosSeleccionados, servicioId],
-      }))
-    } else {
-      setFormulario((prev) => ({
-        ...prev,
-        serviciosSeleccionados: prev.serviciosSeleccionados.filter((id) => id !== servicioId),
-        flotaSeleccionada: prev.flotaSeleccionada?.filter((f) => f.servicioId !== servicioId) || [],
-      }))
-    }
-  }
-
+  // === Helpers ===
   const getIconoServicio = (servicioId: string) => {
     const iconos = {
       "limpieza-aeronaves": { icon: Plane, color: "bg-blue-500 text-white" },
@@ -76,17 +93,69 @@ export default function FormularioCotizacion() {
       "conserjeria-edificios": { icon: Building, color: "bg-red-500 text-white" },
       "limpieza-departamentos": { icon: Home, color: "bg-yellow-500 text-white" },
     }
-    return iconos[servicioId as keyof typeof iconos] || { icon: Sofa, color: "bg-gray-500 text-white" }
+    return (iconos as any)[servicioId] || { icon: Sofa, color: "bg-gray-500 text-white" }
+  }
+
+  const getFlotaAeronaves = (): FlotaItem | undefined =>
+    formulario.flotaSeleccionada.find((f) => f.servicioId === "limpieza-aeronaves")
+
+  const upsertFlotaAeronaves = (patch: Partial<Omit<FlotaItem, "servicioId">>) => {
+    setFormulario((prev) => {
+      const existing = prev.flotaSeleccionada.find((f) => f.servicioId === "limpieza-aeronaves")
+      let next: FlotaItem
+      if (existing) {
+        next = { ...existing, ...patch }
+        return {
+          ...prev,
+          flotaSeleccionada: prev.flotaSeleccionada.map((f) =>
+            f.servicioId === "limpieza-aeronaves" ? next : f
+          ),
+        }
+      }
+      next = {
+        servicioId: "limpieza-aeronaves",
+        tipoFlota: patch.tipoFlota ?? "",
+        numeroAeronaves: patch.numeroAeronaves ?? 1,
+      }
+      return { ...prev, flotaSeleccionada: [...prev.flotaSeleccionada, next] }
+    })
+  }
+
+  // === Handlers ===
+  const handleServicioChange = (servicioId: string, checked: boolean) => {
+    if (checked) {
+      setFormulario((prev) => ({
+        ...prev,
+        serviciosSeleccionados: [...prev.serviciosSeleccionados, servicioId],
+      }))
+      // Si se marca aeronaves, crea registro base de flota si no existe
+      if (servicioId === "limpieza-aeronaves" && !getFlotaAeronaves()) {
+        upsertFlotaAeronaves({ tipoFlota: "", numeroAeronaves: 1 })
+      }
+    } else {
+      setFormulario((prev) => ({
+        ...prev,
+        serviciosSeleccionados: prev.serviciosSeleccionados.filter((id) => id !== servicioId),
+        flotaSeleccionada:
+          prev.flotaSeleccionada?.filter((f) => f.servicioId !== servicioId) || [],
+      }))
+    }
   }
 
   const puedeAvanzar = () => {
     switch (paso) {
       case 1:
-        return formulario.nombre && formulario.email && formulario.telefono
+        return !!(formulario.nombre && formulario.email && formulario.telefono)
       case 2:
         return formulario.serviciosSeleccionados.length > 0
       case 3:
         if (!tieneServicioAeronaves) return true
+        {
+          const f = getFlotaAeronaves()
+          return !!(f && f.tipoFlota && Number(f.numeroAeronaves) > 0)
+        }
+      case 4:
+        // No obligamos, pero puedes exigir frecuencia/urgencia si quieres:
         return true
       default:
         return true
@@ -95,9 +164,9 @@ export default function FormularioCotizacion() {
 
   const siguientePaso = () => {
     if (paso === 2 && !tieneServicioAeronaves) {
-      setPaso(4) // Saltar paso 3 si no hay servicios de aeronaves
+      setPaso(4) // saltar 3 si no hay aeronaves
     } else if (paso === 4) {
-      setPaso(5) // Ir a confirmación
+      setPaso(5)
     } else {
       setPaso(paso + 1)
     }
@@ -105,9 +174,9 @@ export default function FormularioCotizacion() {
 
   const pasoAnterior = () => {
     if (paso === 4 && !tieneServicioAeronaves) {
-      setPaso(2) // Volver al paso 2 si no hay servicios de aeronaves
+      setPaso(2)
     } else if (paso === 5) {
-      setPaso(4) // Volver a detalles
+      setPaso(4)
     } else {
       setPaso(paso - 1)
     }
@@ -115,32 +184,39 @@ export default function FormularioCotizacion() {
 
   const enviarCotizacion = async () => {
     setIsSubmitting(true)
-
     try {
       const response = await fetch("/api/send-email", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "cotizacion",
-          formData: formulario,
           userEmail: formulario.email,
+          formData: formulario, // ← incluye serviciosSeleccionados, flotaSeleccionada, frecuencia, urgencia, comentarios
         }),
       })
-
       const result = await response.json()
-
       if (result.success) {
-        alert(
-          "¡Cotización enviada exitosamente! Hemos enviado una confirmación a tu email y nos pondremos en contacto contigo pronto.",
+        setBanner({ type: "success", msg: "¡Recibimos tu solicitud! Te contactaremos muy pronto." })
+        setFormulario(
+          {
+            nombre: "",
+            email: "",
+            telefono: "",
+            empresa: "",
+            serviciosSeleccionados: [],
+            flotaSeleccionada: [],
+            frecuencia: "",
+            urgencia: "",
+            comentarios: "",
+          }
         )
+        setPaso(1)
       } else {
-        alert("Hubo un error al enviar la cotización. Por favor, inténtalo de nuevo.")
+        setBanner({ type: "error", msg: "No pudimos procesar tu solicitud. Inténtalo en unos minutos." })
       }
-    } catch (error) {
-      console.error("Error:", error)
-      alert("Hubo un error al enviar la cotización. Por favor, inténtalo de nuevo.")
+    } catch (e) {
+      console.error(e)
+      alert("Hubo un error al enviar la cotización. Inténtalo de nuevo.")
     } finally {
       setIsSubmitting(false)
     }
@@ -156,7 +232,7 @@ export default function FormularioCotizacion() {
           <p className="text-sm sm:text-base text-gray-600">Solicitud de Cotización</p>
         </div>
 
-        {/* Indicador de progreso - Responsive */}
+        {/* Progreso */}
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-center space-x-1 sm:space-x-2 md:space-x-4 overflow-x-auto pb-4">
             {pasos.map((pasoInfo, index) => {
@@ -164,11 +240,9 @@ export default function FormularioCotizacion() {
               const esCompletado = paso > pasoInfo.numero
               const esPaso3 = pasoInfo.numero === 3
               const mostrarPaso3 = tieneServicioAeronaves || paso === 3
-
               if (esPaso3 && !mostrarPaso3) return null
 
               const IconComponent = pasoInfo.icono
-
               return (
                 <div key={pasoInfo.numero} className="flex items-center">
                   <div className="flex flex-col items-center">
@@ -188,11 +262,7 @@ export default function FormularioCotizacion() {
                     </span>
                   </div>
                   {index < pasos.length - 1 && (esPaso3 ? mostrarPaso3 : true) && (
-                    <div
-                      className={`w-4 sm:w-8 md:w-16 h-1 mx-1 sm:mx-2 ${
-                        paso > pasoInfo.numero ? "bg-green-500" : "bg-gray-200"
-                      }`}
-                    />
+                    <div className={`w-4 sm:w-8 md:w-16 h-1 mx-1 sm:mx-2 ${paso > pasoInfo.numero ? "bg-green-500" : "bg-gray-200"}`} />
                   )}
                 </div>
               )
@@ -200,7 +270,24 @@ export default function FormularioCotizacion() {
           </div>
         </div>
 
-        <Card className="shadow-lg border-t-4" style={{ borderTopColor: pasoActual.color.replace("bg-", "#") }}>
+        <Card className="shadow-lg border-t-4">
+          {banner && (
+            <div className="mb-4">
+              <Alert variant={banner.type === "success" ? "default" : "destructive"}>
+                <div className="flex items-start gap-2">
+                  {banner.type === "success" ? (
+                    <CheckCircle className="h-4 w-4 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 mt-0.5" />
+                  )}
+                  <div>
+                    <AlertTitle>{banner.type === "success" ? "Solicitud enviada" : "Ha ocurrido un problema"}</AlertTitle>
+                    <AlertDescription>{banner.msg}</AlertDescription>
+                  </div>
+                </div>
+              </Alert>
+            </div>
+          )}
           <CardHeader className="text-center p-4 sm:p-6">
             <CardTitle className="flex items-center justify-center space-x-2 text-lg sm:text-xl">
               <pasoActual.icono className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -214,15 +301,12 @@ export default function FormularioCotizacion() {
               {paso === 5 && "Revisa tu solicitud antes de enviar"}
             </CardDescription>
           </CardHeader>
-
           <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-            {/* Paso 1: Información Personal */}
+            {/* Paso 1 */}
             {paso === 1 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="nombre" className="text-sm sm:text-base">
-                    Nombre completo *
-                  </Label>
+                  <Label htmlFor="nombre" className="text-sm sm:text-base">Nombre completo *</Label>
                   <Input
                     id="nombre"
                     value={formulario.nombre}
@@ -232,9 +316,7 @@ export default function FormularioCotizacion() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email" className="text-sm sm:text-base">
-                    Email *
-                  </Label>
+                  <Label htmlFor="email" className="text-sm sm:text-base">Email *</Label>
                   <Input
                     id="email"
                     type="email"
@@ -245,9 +327,7 @@ export default function FormularioCotizacion() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="telefono" className="text-sm sm:text-base">
-                    Teléfono *
-                  </Label>
+                  <Label htmlFor="telefono" className="text-sm sm:text-base">Teléfono *</Label>
                   <Input
                     id="telefono"
                     value={formulario.telefono}
@@ -257,9 +337,7 @@ export default function FormularioCotizacion() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="empresa" className="text-sm sm:text-base">
-                    Empresa
-                  </Label>
+                  <Label htmlFor="empresa" className="text-sm sm:text-base">Empresa</Label>
                   <Input
                     id="empresa"
                     value={formulario.empresa}
@@ -271,14 +349,13 @@ export default function FormularioCotizacion() {
               </div>
             )}
 
-            {/* Paso 2: Selección de servicios */}
+            {/* Paso 2: servicios */}
             {paso === 2 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 {servicios.map((servicio) => {
                   const iconoInfo = getIconoServicio(servicio.id)
                   const IconComponent = iconoInfo.icon
                   const isSelected = formulario.serviciosSeleccionados.includes(servicio.id)
-
                   return (
                     <div
                       key={servicio.id}
@@ -290,7 +367,7 @@ export default function FormularioCotizacion() {
                       <Checkbox
                         id={servicio.id}
                         checked={isSelected}
-                        onCheckedChange={(checked) => handleServicioChange(servicio.id, checked as boolean)}
+                        onCheckedChange={(checked) => handleServicioChange(servicio.id, !!checked)}
                         className="mt-1"
                       />
                       <div className="flex-1 min-w-0">
@@ -298,17 +375,12 @@ export default function FormularioCotizacion() {
                           <div className={`p-1.5 sm:p-2 rounded-lg ${iconoInfo.color} flex-shrink-0`}>
                             <IconComponent className="h-3 w-3 sm:h-4 sm:w-4" />
                           </div>
-                          <Label
-                            htmlFor={servicio.id}
-                            className="text-xs sm:text-sm font-medium cursor-pointer leading-tight"
-                          >
+                          <Label htmlFor={servicio.id} className="text-xs sm:text-sm font-medium cursor-pointer leading-tight">
                             {servicio.nombre}
                           </Label>
                         </div>
                         {servicio.tieneFlota && (
-                          <p className="text-xs text-blue-600 ml-8 sm:ml-11">
-                            Incluye configuración de flota específica
-                          </p>
+                          <p className="text-xs text-blue-600 ml-8 sm:ml-11">Incluye configuración de flota específica</p>
                         )}
                       </div>
                     </div>
@@ -317,7 +389,7 @@ export default function FormularioCotizacion() {
               </div>
             )}
 
-            {/* Paso 3: Servicio de Aeronave */}
+            {/* Paso 3: aeronaves */}
             {paso === 3 && tieneServicioAeronaves && (
               <div className="space-y-4 sm:space-y-6">
                 <div className="bg-gradient-to-r from-blue-50 to-yellow-50 p-3 sm:p-4 rounded-lg border border-blue-200">
@@ -330,10 +402,11 @@ export default function FormularioCotizacion() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="tipoFlota" className="text-sm sm:text-base">
-                      Tipo de Flota *
-                    </Label>
-                    <Select>
+                    <Label htmlFor="tipoFlota" className="text-sm sm:text-base">Tipo de Flota *</Label>
+                    <Select
+                      value={getFlotaAeronaves()?.tipoFlota ?? ""}
+                      onValueChange={(v) => upsertFlotaAeronaves({ tipoFlota: v })}
+                    >
                       <SelectTrigger className="text-sm sm:text-base">
                         <SelectValue placeholder="Seleccione tipo de aeronave" />
                       </SelectTrigger>
@@ -350,14 +423,16 @@ export default function FormularioCotizacion() {
                   </div>
 
                   <div>
-                    <Label htmlFor="numeroAeronaves" className="text-sm sm:text-base">
-                      Número de Aeronaves
-                    </Label>
+                    <Label htmlFor="numeroAeronaves" className="text-sm sm:text-base">Número de Aeronaves *</Label>
                     <Input
                       id="numeroAeronaves"
                       type="number"
-                      placeholder="1"
-                      min="1"
+                      min={1}
+                      value={getFlotaAeronaves()?.numeroAeronaves ?? 1}
+                      onChange={(e) => {
+                        const n = Math.max(1, Number(e.target.value || 1))
+                        upsertFlotaAeronaves({ numeroAeronaves: n })
+                      }}
                       className="text-sm sm:text-base"
                     />
                   </div>
@@ -365,7 +440,7 @@ export default function FormularioCotizacion() {
               </div>
             )}
 
-            {/* Paso 4: Detalles */}
+            {/* Paso 4: detalles */}
             {paso === 4 && (
               <div className="space-y-4 sm:space-y-6">
                 <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-3 sm:p-4 rounded-lg border border-purple-200">
@@ -373,17 +448,16 @@ export default function FormularioCotizacion() {
                     <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                     Detalles Adicionales
                   </h3>
-                  <p className="text-xs sm:text-sm text-purple-700">
-                    Información adicional para personalizar su cotización
-                  </p>
+                  <p className="text-xs sm:text-sm text-purple-700">Información adicional para personalizar su cotización</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="frecuencia" className="text-sm sm:text-base">
-                      Frecuencia del Servicio
-                    </Label>
-                    <Select>
+                    <Label htmlFor="frecuencia" className="text-sm sm:text-base">Frecuencia del Servicio</Label>
+                    <Select
+                      value={formulario.frecuencia}
+                      onValueChange={(v: Frecuencia) => setFormulario((prev) => ({ ...prev, frecuencia: v }))}
+                    >
                       <SelectTrigger className="text-sm sm:text-base">
                         <SelectValue placeholder="Seleccione frecuencia" />
                       </SelectTrigger>
@@ -398,10 +472,11 @@ export default function FormularioCotizacion() {
                   </div>
 
                   <div>
-                    <Label htmlFor="urgencia" className="text-sm sm:text-base">
-                      Urgencia
-                    </Label>
-                    <Select>
+                    <Label htmlFor="urgencia" className="text-sm sm:text-base">Urgencia</Label>
+                    <Select
+                      value={formulario.urgencia}
+                      onValueChange={(v: Urgencia) => setFormulario((prev) => ({ ...prev, urgencia: v }))}
+                    >
                       <SelectTrigger className="text-sm sm:text-base">
                         <SelectValue placeholder="Nivel de urgencia" />
                       </SelectTrigger>
@@ -415,20 +490,20 @@ export default function FormularioCotizacion() {
                 </div>
 
                 <div>
-                  <Label htmlFor="comentarios" className="text-sm sm:text-base">
-                    Comentarios Adicionales
-                  </Label>
+                  <Label htmlFor="comentarios" className="text-sm sm:text-base">Comentarios Adicionales</Label>
                   <Textarea
                     id="comentarios"
                     placeholder="Especifique detalles adicionales, ubicación, horarios preferidos, etc."
                     rows={4}
+                    value={formulario.comentarios}
+                    onChange={(e) => setFormulario((prev) => ({ ...prev, comentarios: e.target.value }))}
                     className="text-sm sm:text-base resize-none"
                   />
                 </div>
               </div>
             )}
 
-            {/* Paso 5: Confirmación */}
+            {/* Paso 5: confirmación */}
             {paso === 5 && (
               <div className="space-y-4 sm:space-y-6">
                 <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-3 sm:p-4 rounded-lg border border-emerald-200">
@@ -443,27 +518,15 @@ export default function FormularioCotizacion() {
                   <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                     <h3 className="font-medium mb-3 text-center text-sm sm:text-base">Información de Contacto</h3>
                     <div className="text-xs sm:text-sm text-gray-600 space-y-2">
-                      <p>
-                        <strong>Nombre:</strong> {formulario.nombre}
-                      </p>
-                      <p>
-                        <strong>Email:</strong> {formulario.email}
-                      </p>
-                      <p>
-                        <strong>Teléfono:</strong> {formulario.telefono}
-                      </p>
-                      {formulario.empresa && (
-                        <p>
-                          <strong>Empresa:</strong> {formulario.empresa}
-                        </p>
-                      )}
+                      <p><strong>Nombre:</strong> {formulario.nombre}</p>
+                      <p><strong>Email:</strong> {formulario.email}</p>
+                      <p><strong>Teléfono:</strong> {formulario.telefono}</p>
+                      {formulario.empresa && <p><strong>Empresa:</strong> {formulario.empresa}</p>}
                     </div>
                   </div>
 
                   <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
-                    <h3 className="font-medium mb-3 text-center text-blue-900 text-sm sm:text-base">
-                      Servicios Seleccionados
-                    </h3>
+                    <h3 className="font-medium mb-3 text-center text-blue-900 text-sm sm:text-base">Servicios Seleccionados</h3>
                     <div className="space-y-2">
                       {formulario.serviciosSeleccionados.map((servicioId) => {
                         const servicio = servicios.find((s) => s.id === servicioId)
@@ -474,17 +537,34 @@ export default function FormularioCotizacion() {
                             <div className={`p-1 rounded ${iconoInfo.color}`}>
                               <IconComponent className="h-2 w-2 sm:h-3 sm:w-3" />
                             </div>
-                            <span>{servicio?.nombre}</span>
+                            <span>{servicio?.nombre || servicioId}</span>
                           </div>
                         )
                       })}
                     </div>
+
+                    {tieneServicioAeronaves && (
+                      <div className="mt-4 bg-white p-3 rounded border text-xs sm:text-sm">
+                        <p className="font-medium mb-2">Configuración Aeronaves</p>
+                        <p><strong>Tipo de Flota:</strong> {getFlotaAeronaves()?.tipoFlota || "-"}</p>
+                        <p><strong>N° Aeronaves:</strong> {getFlotaAeronaves()?.numeroAeronaves || "-"}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 p-3 sm:p-4 rounded-lg">
+                  <h3 className="font-medium mb-3 text-purple-900 text-sm sm:text-base">Detalles</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs sm:text-sm">
+                    <p><strong>Frecuencia:</strong> {formulario.frecuencia || "-"}</p>
+                    <p><strong>Urgencia:</strong> {formulario.urgencia || "-"}</p>
+                    <p className="md:col-span-3"><strong>Comentarios:</strong> {formulario.comentarios || "-"}</p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Botones de navegación */}
+            {/* Navegación */}
             <div className="flex justify-between pt-4 sm:pt-6 gap-4">
               <Button
                 variant="outline"
@@ -501,7 +581,6 @@ export default function FormularioCotizacion() {
                   onClick={siguientePaso}
                   disabled={!puedeAvanzar()}
                   className="flex items-center space-x-2 text-sm sm:text-base px-3 sm:px-4"
-                  style={{ backgroundColor: pasoActual.color.replace("bg-", "") }}
                 >
                   <span>Siguiente</span>
                   <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
