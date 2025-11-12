@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend";
 
-const resend = new Resend('re_S8A4kTi2_FCvGoyWh1vWvW34TUyd3SuTn');
+// const resend = new Resend('re_S8A4kTi2_FCvGoyWh1vWvW34TUyd3SuTn');
+const resend = new Resend(process.env.RESEND_API_KEY);
 import { 
   contactEmailHTML,
   contactEmailText,
