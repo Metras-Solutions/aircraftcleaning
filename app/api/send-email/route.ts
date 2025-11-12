@@ -15,9 +15,7 @@ export async function POST(request: NextRequest) {
     const { type, formData, userEmail } = body
 
     // Destinatarios actualizados
-    const destinatarios = ["info@hynaircraft.com", "noemidiaz@hynaircraft.com"]
-    // const destinatarios = ["jose.roman@metrasolutions.com", "maria.gomez@metrasolutions.com"]
-    // const destinatarios = ["jose.roman@metrasolutions.com"]
+    const destinatarios = ["noemidiaz@hynaircraft.com"]
     const name = formData.nombre || "Sin Nombre"
     const email = formData.email || ""
     const message = formData.mensaje || ""
